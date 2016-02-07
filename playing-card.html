@@ -1,0 +1,180 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../neon-animation/neon-animation-runner-behavior.html">
+<link rel="import" href="animations.html">
+
+<dom-module id="playing-card">
+  <template>
+    <style>
+      :host {
+        box-sizing: border-box;
+        display: inline-block;
+        position: absolute;
+
+        width: 180px;
+        height: 265px;
+        left: 28px;
+        top: 30px;
+
+        border: 1px solid black;
+        border-radius: 6px;
+        box-shadow: 0px 5px 15px black;
+        background-color: #fff;
+
+        font-family: verdana,arial,helvetica,sans-serif;
+      }
+      :host.hidden {
+        visibility: hidden;
+        display: none;
+      }
+      :host.spades, :host.clubs { color: #18191e; }
+      :host.hearts, :host.diamonds { color: #bf0c1d; }
+
+      :host * {
+        display: inline-block;
+        position: absolute;
+      }
+
+      .rank { font-size: 3em; }
+      .suit { font-size: 6em; }
+
+      .left { left: 10px; }
+      .right { right: 10px; }
+      .top { top: 10px; }
+      .bottom { bottom: 10px; }
+      .upside-down { transform: rotateZ(180deg); }
+      .center {
+        display: inline-block;
+        position: absolute;
+        width: 80px;
+        height: 90px;
+        left: 50px;
+        top: 75px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 6em;
+      }
+    </style>
+    <div class="top left rank">[[symbolify('rank', rank)]]</div>
+    <div class="center suit">[[symbolify('suit', suit)]]</div>
+    <div class="bottom right upside-down rank">[[symbolify('rank', rank)]]</div>
+  </template>
+
+  <script>
+    (function() {
+      var CARD_SUITS = [
+        { symbol: '♠',  name: 'spades' },
+        { symbol: '♣',  name: 'clubs' },
+        { symbol: '♥',  name: 'hearts' },
+        { symbol: '♦️',  name: 'diamonds' }
+      ];
+      var CARD_RANKS = [
+        { symbol: '2',  name: 'two' },
+        { symbol: '3',  name: 'three' },
+        { symbol: '4',  name: 'four' },
+        { symbol: '5',  name: 'five' },
+        { symbol: '6',  name: 'six' },
+        { symbol: '7',  name: 'seven' },
+        { symbol: '8',  name: 'eight' },
+        { symbol: '9',  name: 'nine' },
+        { symbol: '10', name: 'ten' },
+        { symbol: 'J',  name: 'jack' },
+        { symbol: 'Q',  name: 'queen' },
+        { symbol: 'K',  name: 'king' },
+        { symbol: 'A',  name: 'ace' }
+      ];
+      Polymer({
+        is:             'playing-card',
+        behaviors:      [Polymer.NeonAnimationRunnerBehavior],
+        properties: {
+          suit: {
+            type: Number,
+            value: null,
+            observer: '_suitChanged'
+          },
+          rank: {
+            type: Number,
+            value: null,
+            observer: '_rankChanged'
+          },
+
+          active: {
+            type: Boolean,
+            value: false
+          },
+
+          animationConfig:{
+            value: function() {
+              return {
+                show: [{
+                  name: 'card-show-animation',
+                  node: this
+                }],
+                hide: [{
+                  name: 'card-hide-animation',
+                  node: this
+                }],
+              };
+            }
+          }
+        },
+
+        observers: [
+          '_activeChanged(active)'
+        ],
+        listeners: {
+          'neon-animation-finish': '_onAnimationFinish'
+        },
+
+        created: function() {
+          this._prevSuit = this._prevRank = -1;
+          this._animating = false;
+          this._targetActive = false;
+          this._queuedStates = [];
+        },
+        symbolify: function(what, val) {
+          switch (what) {
+            case 'suit':  return CARD_SUITS[val].symbol;
+            case 'rank':  return CARD_RANKS[val].symbol;
+            default:      return '?';
+          }
+        },
+        _activeChanged: function() {
+          this._queuedStates.push(this.active);
+          this._dequeueStateChange();
+        },
+
+        _suitChanged: function() {
+          if (this._prevSuit > 0)
+            this.classList.remove(CARD_SUITS[this._prevSuit].name);
+          this.classList.add(CARD_SUITS[this.suit].name);
+          this._prevSuit = this.suit;
+        },
+        _rankChanged: function() {
+          if (this._prevRank > 0)
+            this.classList.remove(CARD_RANKS[this._prevRank].name);
+          this.classList.add(CARD_RANKS[this.rank].name);
+          this._prevRank = this.rank;
+        },
+
+        _dequeueStateChange: function() {
+          if (this._animating || this._queuedStates.length == 0)
+            return;
+          // Prevent animations to overlap.
+          this._animating = true;
+          // If target is active, remove the hidden class and add the transition one.
+          if (this._targetActive = this._queuedStates.pop())
+            this.toggleClass('hidden', false);
+          // Play the actual animation based on target state.
+          this.playAnimation(this._targetActive ? 'show' : 'hide');
+        },
+        _onAnimationFinish: function() {
+          if (!this._targetActive)
+            this.toggleClass('hidden', true);
+          this._animating = false;
+          if (this._queuedStates)
+            this._dequeueStateChange();
+        },
+      });
+    })();
+  </script>
+</dom-module>

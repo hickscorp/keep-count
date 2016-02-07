@@ -1,0 +1,45 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../neon-animation/neon-animation-behavior.html">
+
+<script>
+(function() {
+  Polymer({
+    is: 'card-show-animation',
+    behaviors: [Polymer.NeonAnimationBehavior],
+    configure: function(config) {
+      var node = config.node;
+      this.setPrefixedProperty(node, 'transformOrigin', '50% 100%');
+      this._effect = new KeyframeEffect(node,
+        [{
+          'transform':  'translateY(-150%) rotate(45deg)',
+          'opacity':    '0',
+          'box-shadow': '30px 30px 30px black'
+        }, {
+          'transform':  'none',
+          'opacity':    '1',
+          'box-shadow': '0px 5px 15px black'
+        }], this.timingFromConfig(config));
+      return this._effect;
+    }
+  });
+  Polymer({
+    is: 'card-hide-animation',
+    behaviors: [Polymer.NeonAnimationBehavior],
+    configure: function(config) {
+      var node = config.node;
+      this.setPrefixedProperty(node, 'transformOrigin', '50% 0');
+      this._effect = new KeyframeEffect(node,
+        [{
+          'transform':  'none',
+          'opacity':    '1',
+          'box-shadow': '0px 5px 15px black'
+        }, {
+          'transform':  'translateX(-100%) rotate(-15deg)',
+          'opacity':    '0',
+          'box-shadow': '30px 30px 30px black'
+        }], this.timingFromConfig(config));
+      return this._effect;
+    }
+  });
+})();
+</script>
