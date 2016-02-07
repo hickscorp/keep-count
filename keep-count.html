@@ -46,14 +46,14 @@ Example usage:
     <paper-card>
       <div class="card-content">
         <template is="dom-repeat" items="[[cards]]" as="card">
-          <playing-card active="[[_testEqual(index, currentIndex)]]" suit="[[card.suit]]" rank="[[card.rank]]"></playing-card>
+          <playing-card active="[[_testEqual(index, currentCardIndex)]]" suit="[[card.suit]]" rank="[[card.rank]]"></playing-card>
         </template>
       </div>
       <div class="card-actions">
         <paper-icon-button disabled="[[isPlaying]]" title="Shuffle" icon="av:shuffle" on-click="reset"></paper-icon-button>
         <paper-icon-button disabled="[[isPlaying]]" title="Next" icon="av:play-arrow" on-click="next"></paper-icon-button>
         <paper-icon-button disabled="[[!isPlaying]]" title="Stop" icon="av:pause" on-click="stop">Stop</paper-icon-button>
-        <paper-icon-button disabled="[[isPlaying]]" title="Restart" icon="av:fast-rewind" on-click="restart"></paper-icon-button>
+        <paper-icon-button disabled="[[isPlaying]]" title="Restart" icon="av:fast-rewind" on-click="resetCurrentCardIndex"></paper-icon-button>
         <paper-icon-button title="Toggle Info" icon="[[_infoToggleIcon(showInfo)]]" on-click="toggleInfo" style="float: right"></paper-icon-button>
       </div>
       <div class="card-actions">
@@ -62,26 +62,26 @@ Example usage:
       <iron-collapse id="info" opened="[[showInfo]]" style="width:100%;">
         <paper-item>
           <paper-item-body>
-            <div>[[remainingCardsCount]]</div>
             <div secondary>Cards Left</div>
+            <div>[[remainingCardsCount]]</div>
           </paper-item-body>
         </paper-item>
         <paper-item>
           <paper-item-body>
-            <div>[[weight]]</div>
             <div secondary>Deck Weight</div>
+            <div>[[weight]]</div>
           </paper-item-body>
         </paper-item>
         <paper-item>
           <paper-item-body>
-            <div>[[loPeak]]</div>
             <div secondary>Lo-Peak</div>
+            <div>[[loPeak]]</div>
           </paper-item-body>
         </paper-item>
         <paper-item>
           <paper-item-body>
-            <div>[[hiPeak]]</div>
             <div secondary>Hi-Peak</div>
+            <div>[[hiPeak]]</div>
           </paper-item-body>
         </paper-item>
       </iron-collapse>
@@ -128,15 +128,16 @@ Example usage:
             type: Object,
             readOnly: true
           },
+          // The index of the card being currently shown.
+          currentCardIndex: {
+            type: Number,
+            readOnly: true,
+            observer: '_currentCardIndexChanged'
+          },
           // The count of cards remaining in the deck.
           remainingCardsCount: {
             type: Number,
-            computed: '_remainingCardsCount(cards.*, currentIndex)'
-          },
-          // The index of the card being currently shown.
-          currentIndex: {
-            type: Number,
-            readOnly: true
+            computed: '_remainingCardsCount(cards.*, currentCardIndex)'
           },
 
           // Is the component automatically drawing cards right now?
@@ -189,18 +190,20 @@ Example usage:
           delete(this._nextDraw);
           this._setIsPlaying(false);
         },
-        // Restarts the deck being currently played.
         restart: function() {
-          this._setCurrentIndex(-1);
+          this.resetCurrentCardIndex();
         },
         // Creates a new randomized deck and restarts it.
         reset: function() {
-          this.debounce('reset', function() {
-            for (var what of ['Weight', 'LoPeak', 'HiPeak'])
-              this['_set'+what](0);
-            this._makeRandomDeck();
-            this._setCurrentIndex(-1);
-          }, 10);
+          for (var what of ['Weight', 'LoPeak', 'HiPeak'])
+            this['_set'+what](0);
+          this._makeRandomDeck();
+          this.resetCurrentCardIndex();
+        },
+        resetCurrentCardIndex: function() {
+          this._setLoPeak(0);
+          this._setHiPeak(0);
+          this._setCurrentCardIndex(-1);
         },
         // Toggles the information pane visibility.
         toggleInfo: function() {
@@ -217,7 +220,7 @@ Example usage:
         },
         // Gives the remaining card count in the current deck.
         _remainingCardsCount: function() {
-          return this.cards.length - this.currentIndex - 1;
+          return this.cards.length - this.currentCardIndex - 1;
         },
 
         _speedChanged: function() {
@@ -233,23 +236,24 @@ Example usage:
           if (this.remainingCardsCount <= 0)
             return this.stop();
           // Draw a card.
-          this._setCurrentIndex(this.currentIndex + 1);
-
-          // Recompute deck weight.
-          var w = 0;
-          if (this.currentIndex < this.cards.length)
-            for (var i=this.currentIndex; i >= 0; --i)
-              w += CARD_SCORES[this.cards[i].rank];
-          this._setWeight(w);
-          // Recompute peaks.
-          this._setLoPeak(Math.min(this.loPeak, this.weight));
-          this._setHiPeak(Math.max(this.hiPeak, this.weight));
-
+          this._setCurrentCardIndex(this.currentCardIndex + 1);
           // Set isPlaying.
           this._setIsPlaying(this.autoNext);
           // If automatic mode is on, schedule next draw.
           if (this.autoNext)
             this._nextDraw = this.async(this._draw, (2500-this.speed*200));
+        },
+        // Whenever the current card index changes, recompute all stats.
+        _currentCardIndexChanged: function() {
+          // Recompute deck weight.
+          var w = 0;
+          if (this.currentCardIndex < this.cards.length)
+            for (var i=this.currentCardIndex; i >= 0; --i)
+              w += CARD_SCORES[this.cards[i].rank];
+          this._setWeight(w);
+          // Recompute peaks.
+          this._setLoPeak(Math.min(this.loPeak, this.weight));
+          this._setHiPeak(Math.max(this.hiPeak, this.weight));
         }
       });
     })();
