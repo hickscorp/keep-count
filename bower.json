@@ -1,0 +1,28 @@
+{
+  "name": "keep-count",
+  "version": "0.0.2",
+  "authors": ["HERAULT-MARTIN Pierre<HicksCorp@GMail.com>"],
+  "description": "",
+  "keywords": [],
+  "main": "keep-count.html",
+  "license": "http://polymer.github.io/LICENSE.txt",
+  "homepage": "https://github.com/<USERNAME>/keep-count/",
+  "ignore": [
+    "/.*",
+    "/test/"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.3.0",
+    "neon-animation": "PolymerElements/neon-animation#~1.1.0",
+    "paper-icon-button": "PolymerElements/paper-icon-button#~1.0.6",
+    "iron-icons": "PolymerElements/iron-icons#~1.1.3",
+    "iron-collapse": "PolymerElements/iron-collapse#~1.0.6",
+    "paper-card": "PolymerElements/paper-card#~1.1.1",
+    "paper-item": "PolymerElements/paper-item#~1.1.4",
+    "paper-slider": "PolymerElements/paper-slider#~1.0.9"
+  },
+  "devDependencies": {
+    "web-component-tester": "^4.0.0",
+    "iron-component-page": "PolymerElements/iron-component-page#^1.1.4"
+  }
+}

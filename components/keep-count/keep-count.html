@@ -1,0 +1,261 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-icons/av-icons.html">
+<link rel="import" href="../iron-collapse/iron-collapse.html">
+<link rel="import" href="../iron-icons/hardware-icons.html">
+<link rel="import" href="../paper-card/paper-card.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-item/paper-item-body.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-slider/paper-slider.html">
+<link rel="import" href="playing-card.html">
+
+<!--
+An element to make learning of blackjack HiLo fun!
+
+Example usage:
+
+    <keep-count
+      auto-next
+      show-info
+      speed="5"
+      deck-count="1">
+    </keep-count>
+
+@demo demo/index.html
+-->
+<dom-module id="keep-count">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+        box-sizing: border-box;
+      }
+      paper-card {
+        overflow: hidden;
+      }
+      .card-content {
+        width: 240px;
+        height: 326px;
+        padding: 0 0 0 0;
+        background-image: url(assets/background.jpg);
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+    </style>
+    <paper-card>
+      <div class="card-content">
+        <template is="dom-repeat" items="[[cards]]" as="card">
+          <playing-card active="[[_testEqual(index, currentCardIndex)]]" suit="[[card.suit]]" rank="[[card.rank]]"></playing-card>
+        </template>
+      </div>
+      <div class="card-actions">
+        <paper-icon-button disabled="[[isPlaying]]" title="Shuffle" icon="av:shuffle" on-click="reset"></paper-icon-button>
+        <paper-icon-button disabled="[[isPlaying]]" title="Next" icon="av:play-arrow" on-click="next"></paper-icon-button>
+        <paper-icon-button disabled="[[!isPlaying]]" title="Stop" icon="av:pause" on-click="stop">Stop</paper-icon-button>
+        <paper-icon-button disabled="[[isPlaying]]" title="Restart" icon="av:fast-rewind" on-click="resetCurrentCardIndex"></paper-icon-button>
+        <paper-icon-button title="Toggle Info" icon="[[_infoToggleIcon(showInfo)]]" on-click="toggleInfo" style="float: right"></paper-icon-button>
+      </div>
+      <div class="card-actions">
+        <paper-slider pin min="0" max="10" value="{{speed}}"></paper-slider>
+      </div>
+      <iron-collapse id="info" opened="[[showInfo]]" style="width:100%;">
+        <paper-item>
+          <paper-item-body>
+            <div secondary>Cards Left</div>
+            <div>[[remainingCardsCount]]</div>
+          </paper-item-body>
+        </paper-item>
+        <paper-item>
+          <paper-item-body>
+            <div secondary>Deck Weight</div>
+            <div>[[weight]]</div>
+          </paper-item-body>
+        </paper-item>
+        <paper-item>
+          <paper-item-body>
+            <div secondary>Lo-Peak</div>
+            <div>[[loPeak]]</div>
+          </paper-item-body>
+        </paper-item>
+        <paper-item>
+          <paper-item-body>
+            <div secondary>Hi-Peak</div>
+            <div>[[hiPeak]]</div>
+          </paper-item-body>
+        </paper-item>
+      </iron-collapse>
+    </paper-card>
+  </template>
+
+  <script>
+    (function() {
+      var CARD_SCORES = [1, 1, 1, 1, 1, 0, 0, 0, -1, -1, -1, -1, -1];
+      Polymer({
+        is:             'keep-count',
+
+        properties: {
+          // Speed on which to automatically draw cards.
+          speed: {
+            type: Number,
+            value: 0,
+            observer: '_speedChanged'
+          },
+          // Whether to show or hide the info pane.
+          showInfo: {
+            type: Boolean,
+            value: false,
+            notify: true
+          },
+          // Whether to automatically draw next cards.
+          autoNext: {
+            type: Boolean,
+            value: true,
+            notify: true
+          },
+          // Number of 52-cards decks to use.
+          deckCount:      {
+            type: Number,
+            value: 1,
+            observer: 'reset'
+          },
+
+          /**
+           * The deck of cards. A card is a simple object as follows:
+           * `{ suit: Number, rank: Number }`
+           */
+          cards: {
+            type: Object,
+            readOnly: true
+          },
+          // The index of the card being currently shown.
+          currentCardIndex: {
+            type: Number,
+            readOnly: true,
+            observer: '_currentCardIndexChanged'
+          },
+          // The count of cards remaining in the deck.
+          remainingCardsCount: {
+            type: Number,
+            computed: '_remainingCardsCount(cards.*, currentCardIndex)'
+          },
+
+          // Is the component automatically drawing cards right now?
+          isPlaying: {
+            type: Boolean,
+            readOnly: true,
+            value: false
+          },
+
+          // That's the current deck weight.
+          weight: {
+            type: Number,
+            readOnly: true
+          },
+          // The highest Hi peak reached so far.
+          hiPeak: {
+            type: Number,
+            readOnly: true
+          },
+          // The lowest Lo peak reached so far.
+          loPeak: {
+            type: Number,
+            readOnly: true
+          }
+        },
+
+        _makeRandomDeck: function() {
+          var cards = [];
+          for (var i=0; i<this.deckCount; ++i)
+            for (var suit=0; suit<4; suit++)
+              for (var rank=0; rank<13; rank++)
+                cards.push({ suit: suit, rank: rank });
+          for (var i=0; i<cards.length; ++i) {
+            j = Math.floor(Math.random() * i);
+            x = cards[i];
+            cards[i] = cards[j];
+            cards[j] = x;
+          }
+          this._setCards(cards);
+        },
+
+        // Instructs the element to draw the next card.
+        next: function() {
+          if (!this._nextDraw)
+            this._draw();
+        },
+        // Stops the automatic drawing of cards at the current one.
+        stop: function() {
+          this.cancelAsync(this._nextDraw);
+          delete(this._nextDraw);
+          this._setIsPlaying(false);
+        },
+        restart: function() {
+          this.resetCurrentCardIndex();
+        },
+        // Creates a new randomized deck and restarts it.
+        reset: function() {
+          for (var what of ['Weight', 'LoPeak', 'HiPeak'])
+            this['_set'+what](0);
+          this._makeRandomDeck();
+          this.resetCurrentCardIndex();
+        },
+        resetCurrentCardIndex: function() {
+          this._setLoPeak(0);
+          this._setHiPeak(0);
+          this._setCurrentCardIndex(-1);
+        },
+        // Toggles the information pane visibility.
+        toggleInfo: function() {
+          this.showInfo = !this.showInfo;
+        },
+
+        // Tests whether two variables are the same or not.
+        _testEqual: function(i1, i2) {
+          return i1 == i2;
+        },
+        // Gets the icon to be displayed for the toggleInfo button.
+        _infoToggleIcon: function() {
+          return 'hardware:keyboard-arrow-'+(this.showInfo?'up':'down')
+        },
+        // Gives the remaining card count in the current deck.
+        _remainingCardsCount: function() {
+          return this.cards.length - this.currentCardIndex - 1;
+        },
+
+        _speedChanged: function() {
+          if (!this._nextDraw)
+            return
+          this.cancelAsync(this._nextDraw);
+          this._draw();
+        },
+
+        // Internal worker for drawing a card, and scheduling the next draw.
+        _draw: function() {
+          // No cards left in deck.
+          if (this.remainingCardsCount <= 0)
+            return this.stop();
+          // Draw a card.
+          this._setCurrentCardIndex(this.currentCardIndex + 1);
+          // Set isPlaying.
+          this._setIsPlaying(this.autoNext);
+          // If automatic mode is on, schedule next draw.
+          if (this.autoNext)
+            this._nextDraw = this.async(this._draw, (2500-this.speed*200));
+        },
+        // Whenever the current card index changes, recompute all stats.
+        _currentCardIndexChanged: function() {
+          // Recompute deck weight.
+          var w = 0;
+          if (this.currentCardIndex < this.cards.length)
+            for (var i=this.currentCardIndex; i >= 0; --i)
+              w += CARD_SCORES[this.cards[i].rank];
+          this._setWeight(w);
+          // Recompute peaks.
+          this._setLoPeak(Math.min(this.loPeak, this.weight));
+          this._setHiPeak(Math.max(this.hiPeak, this.weight));
+        }
+      });
+    })();
+  </script>
+</dom-module>
