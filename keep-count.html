@@ -45,8 +45,8 @@ Example usage:
     </style>
     <paper-card>
       <div class="card-content">
-        <template is="dom-repeat" items="[[cards]]" as="card">
-          <playing-card active="[[_testEqual(index, currentCardIndex)]]" suit="[[card.suit]]" rank="[[card.rank]]"></playing-card>
+        <template is="dom-repeat" items="[[visibleCards]]" as="card">
+          <playing-card active="[[_isCardActive(index, currentCardIndex)]]" suit="[[card.suit]]" rank="[[card.rank]]"></playing-card>
         </template>
       </div>
       <div class="card-actions">
@@ -135,10 +135,18 @@ Example usage:
             readOnly: true,
             observer: '_currentCardIndexChanged'
           },
+
           // The count of cards remaining in the deck.
           remainingCardsCount: {
             type: Number,
-            computed: '_remainingCardsCount(cards.*, currentCardIndex)'
+            computed: '_remainingCardsCount(currentCardIndex)'
+          },
+
+          visibleCards: {
+            type: Array,
+            value: function() {
+              return [{ active: false, suit: 0, rank: 0 }, { active: false, suit: 0, rank: 0 }];
+            }
           },
 
           // Is the component automatically drawing cards right now?
@@ -219,6 +227,11 @@ Example usage:
         _infoToggleIcon: function() {
           return 'hardware:keyboard-arrow-'+(this.showInfo?'up':'down')
         },
+
+        _computeCurrentCard: function() {
+          this.cards[this.currentCardIndex];
+        },
+
         // Gives the remaining card count in the current deck.
         _remainingCardsCount: function() {
           return this.cards.length - this.currentCardIndex - 1;
@@ -231,30 +244,44 @@ Example usage:
           this._draw();
         },
 
+        _isCardActive: function (which) {
+          return which == (this.currentCardIndex % 2)
+        },
+
         // Internal worker for drawing a card, and scheduling the next draw.
         _draw: function() {
           // No cards left in deck.
-          if (this.remainingCardsCount <= 0)
+          if (this.remainingCardsCount <= 0) {
             return this.stop();
+          }
           // Draw a card.
           this._setCurrentCardIndex(this.currentCardIndex + 1);
           // Set isPlaying.
           this._setIsPlaying(this.autoNext);
           // If automatic mode is on, schedule next draw.
-          if (this.autoNext)
+          if (this.autoNext) {
             this._nextDraw = this.async(this._draw, (2500-this.speed*200));
+          }
         },
+
         // Whenever the current card index changes, recompute all stats.
         _currentCardIndexChanged: function() {
-          // Recompute deck weight.
-          var w = 0;
-          if (this.currentCardIndex < this.cards.length)
-            for (var i=this.currentCardIndex; i >= 0; --i)
-              w += CARD_SCORES[this.cards[i].rank];
-          this._setWeight(w);
-          // Recompute peaks.
-          this._setLoPeak(Math.min(this.loPeak, this.weight));
-          this._setHiPeak(Math.max(this.hiPeak, this.weight));
+          var idx = this.currentCardIndex;
+          // Change first and second card.
+          if (idx > -1) {
+            var tracked = this.cards[idx];
+            var vIdx = idx % 2;
+            this.set('visibleCards.'+vIdx, tracked);
+            // Update weight and peaks.
+            this._setWeight(this.weight + CARD_SCORES[this.cards[idx].rank]);
+            this._setLoPeak(Math.min(this.loPeak, this.weight));
+            this._setHiPeak(Math.max(this.hiPeak, this.weight));
+          } else {
+            // Reset weight and peaks.
+            this._setWeight(0);
+            this._setLoPeak(0);
+            this._setHiPeak(0);
+          }
         }
       });
     })();

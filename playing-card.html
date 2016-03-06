@@ -61,13 +61,13 @@
 
   <script>
     (function() {
-      var CARD_SUITS = [
+      var SUITS = [
         { symbol: '♠',  name: 'spades' },
         { symbol: '♣',  name: 'clubs' },
         { symbol: '♥',  name: 'hearts' },
         { symbol: '♦️',  name: 'diamonds' }
       ];
-      var CARD_RANKS = [
+      var RANKS = [
         { symbol: '2',  name: 'two' },
         { symbol: '3',  name: 'three' },
         { symbol: '4',  name: 'four' },
@@ -133,8 +133,8 @@
         },
         symbolify: function(what, val) {
           switch (what) {
-            case 'suit':  return CARD_SUITS[val].symbol;
-            case 'rank':  return CARD_RANKS[val].symbol;
+            case 'suit':  return SUITS[val].symbol;
+            case 'rank':  return RANKS[val].symbol;
             default:      return '?';
           }
         },
@@ -145,14 +145,14 @@
 
         _suitChanged: function() {
           if (this._prevSuit > 0)
-            this.classList.remove(CARD_SUITS[this._prevSuit].name);
-          this.classList.add(CARD_SUITS[this.suit].name);
+            this.classList.remove(SUITS[this._prevSuit].name);
+          this.classList.add(SUITS[this.suit].name);
           this._prevSuit = this.suit;
         },
         _rankChanged: function() {
           if (this._prevRank > 0)
-            this.classList.remove(CARD_RANKS[this._prevRank].name);
-          this.classList.add(CARD_RANKS[this.rank].name);
+            this.classList.remove(RANKS[this._prevRank].name);
+          this.classList.add(RANKS[this.rank].name);
           this._prevRank = this.rank;
         },
 
