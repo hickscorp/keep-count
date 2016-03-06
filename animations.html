@@ -11,7 +11,7 @@
       this.setPrefixedProperty(node, 'transformOrigin', '50% 100%');
       this._effect = new KeyframeEffect(node,
         [{
-          'transform':  'translateY(-150%) rotate(45deg)',
+          'transform':  'translate3D(0, -150%, 0) rotateZ(45deg)',
           'opacity':    '0',
           'box-shadow': '30px 30px 30px black'
         }, {
@@ -34,7 +34,7 @@
           'opacity':    '1',
           'box-shadow': '0px 5px 15px black'
         }, {
-          'transform':  'translateX(-100%) rotate(-15deg)',
+          'transform':  'translate3D(-100%, 0, 0) rotateZ(-15deg)',
           'opacity':    '0',
           'box-shadow': '30px 30px 30px black'
         }], this.timingFromConfig(config));
